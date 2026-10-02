@@ -9,7 +9,7 @@ from openai import OpenAI, APITimeoutError, APIError
 from langsmith.wrappers import wrap_openai
 
 from app.logging_config import configure_logger
-from app.tools import get_vehicle_details
+from app.scenarios import apply_lab_scenario
 
 
 load_dotenv()
@@ -54,25 +54,10 @@ def chat(request: ChatRequest):
             "Answer accurately and concisely."
         )
 
-        model_input = request.message
-
-        # Controlled bad-context scenario for INC005
-        if request.customer_id == "INC005":
-            model_input = (
-                "Company policy context: Refund requests are accepted within 30 days of purchase."
-                + "\n\nCustomer question: "
-                + request.message
-            )
-
-        # Tool workflow used for the vehicle support scenario
-        if request.customer_id == "INC004":
-            vehicle_details = get_vehicle_details("SUV-101")
-
-            model_input = (
-                request.message
-                + "\n\nVehicle lookup result:\n"
-                + json.dumps(vehicle_details)
-            )
+        model_input = apply_lab_scenario(
+            customer_id=request.customer_id,
+            message=request.message
+        )
 
         response = client.responses.create(
             model="gpt-6-luna",
@@ -200,5 +185,7 @@ def chat(request: ChatRequest):
                 "error": "Internal application error"
             }
         )
+
+
 
 
